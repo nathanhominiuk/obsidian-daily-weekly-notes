@@ -1,5 +1,8 @@
 import { App, Plugin, PluginSettingTab, Setting, TFile, Notice } from 'obsidian';
-import moment from 'moment';
+import type { Moment } from 'moment';
+
+// Use Obsidian's global moment instance (provided by Obsidian at runtime)
+declare const moment: typeof import('moment');
 
 interface DailyWeeklyNotesSettings {
 	dailyNoteFormat: string;
@@ -95,7 +98,7 @@ export default class DailyWeeklyNotesPlugin extends Plugin {
 		}
 	}
 
-	generateDailyNoteContent(date: moment.Moment): string {
+	generateDailyNoteContent(date: Moment): string {
 		try {
 			const formattedDate = date.format('dddd MMMM Do, YYYY');
 			const weekLink = date.format(this.settings.weeklyNoteFormat);
@@ -117,7 +120,7 @@ Tomorrow - [[${tomorrow}]]
 		}
 	}
 
-	generateWeeklyNoteContent(date: moment.Moment): string {
+	generateWeeklyNoteContent(date: Moment): string {
 		try {
 			// Get the start of the ISO week (Monday)
 			const weekStart = date.clone().isoWeekday(1);
