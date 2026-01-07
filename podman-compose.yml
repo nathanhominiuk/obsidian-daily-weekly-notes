@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  npm-builder:
+    image: docker.io/library/node:18-alpine
+    container_name: obsidian-plugin-builder
+    working_dir: /app
+    volumes:
+      # Mount only the current directory (read-only for source files)
+      - ./:/app:ro
+      # Mount outputs directory with read-write access
+      - ./outputs:/app/outputs:rw
+    command: >
+      sh -c "
+        echo 'Installing dependencies...' &&
+        npm install &&
+        echo 'Building plugin...' &&
+        npm run build &&
+        echo 'Creating outputs directory if it does not exist...' &&
+        mkdir -p /app/outputs &&
+        echo 'Copying build artifacts to outputs...' &&
+        cp main.js /app/outputs/ &&
+        cp manifest.json /app/outputs/ &&
+        cp styles.css /app/outputs/ &&
+        echo 'Build complete! Files are in the outputs directory.' &&
+        ls -la /app/outputs
+      "
+    network_mode: bridge
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    tmpfs:
+      - /tmp
+      - /app/node_modules
