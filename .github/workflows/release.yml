@@ -1,5 +1,9 @@
 name: Release Obsidian plugin
 
+# This workflow is for manual tag pushes only.
+# Automated releases are handled by version-bump.yml when PRs are merged.
+# Use this if you need to create a release from a manually pushed tag.
+
 on:
   push:
     tags:

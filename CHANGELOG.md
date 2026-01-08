@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Update notes for past updates to CHANGELOG.md
 - CONTRIBUTING.md for future updates and collaborators (also for Claude's benefit)
 
+### Fixed
+- Combined version-bump and release into single workflow to fix GitHub Actions token limitation
+
 ## [0.2.2] - 2026-01-08
 
 ### Added

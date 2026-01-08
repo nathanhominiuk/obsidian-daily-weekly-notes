@@ -1,4 +1,4 @@
-name: Version Bump and Tag
+name: Version Bump and Release
 
 on:
   pull_request:
@@ -7,7 +7,7 @@ on:
       - main
 
 jobs:
-  version-bump:
+  version-bump-and-release:
     # Only run if PR was merged (not just closed)
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
@@ -104,6 +104,11 @@ jobs:
             fs.writeFileSync('versions.json', JSON.stringify(versions, null, '\t') + '\n');
           "
 
+      - name: Build plugin
+        run: |
+          npm install
+          npm run build
+
       - name: Commit and tag
         run: |
           NEW_VERSION="${{ steps.version.outputs.version }}"
@@ -116,3 +121,13 @@ jobs:
         run: |
           git push origin main
           git push origin --tags
+
+      - name: Create release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          NEW_VERSION="${{ steps.version.outputs.version }}"
+          gh release create "$NEW_VERSION" \
+            --title="$NEW_VERSION" \
+            --draft \
+            main.js manifest.json styles.css
