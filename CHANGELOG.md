@@ -5,6 +5,37 @@ All notable changes to the Daily & Weekly Notes Creator plugin will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2026-01-08
+
+### Added
+- GitHub Actions workflow for automated releases
+- Auto-versioning on PR merge using Semantic Versioning
+- PR labels (`major`, `minor`, `patch`) to control version bump type
+
+### Changed
+- Build process migrated from manual Podman builds to GitHub Actions
+- Releases are now created automatically as drafts when PRs are merged
+
+## [0.2.1] - 2026-01-07
+
+### Changed
+- Fixed UI text to use sentence case per Obsidian guidelines
+- Replaced HTML headings with `setHeading()` API in settings
+- Replaced `vault.modify` with `vault.process` for atomic file operations
+- Added `normalizePath()` for safer file path handling
+
+## [0.2.0] - 2026-01-07
+
+### Changed
+- Updated esbuild from 0.17.3 to 0.25.5
+- Updated TypeScript from 4.7.4 to 5.8.3
+- Refactored to use Obsidian's global moment instead of bundling it
+- Reduced bundle size by 95% (158KB → 7KB)
+
+### Removed
+- Removed unused ESLint packages
+- Removed bundled moment.js dependency
+
 ## [0.1.0] - 2026-01-06
 
 ### Added
