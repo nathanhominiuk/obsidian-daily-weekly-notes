@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-daily-weekly-notes",
-	"version": "0.2.2",
+	"version": "0.2.3",
 	"description": "Obsidian plugin for creating templated daily and weekly notes",
 	"main": "main.js",
 	"type": "module",
