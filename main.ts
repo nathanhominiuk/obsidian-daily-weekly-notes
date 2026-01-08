@@ -1,4 +1,4 @@
-import { App, Plugin, PluginSettingTab, Setting, TFile, Notice } from 'obsidian';
+import { App, Plugin, PluginSettingTab, Setting, TFile, Notice, normalizePath } from 'obsidian';
 import type { Moment } from 'moment';
 
 // Use Obsidian's global moment instance (provided by Obsidian at runtime)
@@ -25,7 +25,7 @@ export default class DailyWeeklyNotesPlugin extends Plugin {
 		// Add command to create daily note
 		this.addCommand({
 			id: 'create-daily-note',
-			name: 'Create Daily Note',
+			name: 'Create daily note',
 			callback: () => {
 				this.createDailyNote();
 			}
@@ -34,7 +34,7 @@ export default class DailyWeeklyNotesPlugin extends Plugin {
 		// Add command to create weekly note
 		this.addCommand({
 			id: 'create-weekly-note',
-			name: 'Create Weekly Note',
+			name: 'Create weekly note',
 			callback: () => {
 				this.createWeeklyNote();
 			}
@@ -68,7 +68,7 @@ export default class DailyWeeklyNotesPlugin extends Plugin {
 		try {
 			const today = moment();
 			const fileName = today.format(this.settings.dailyNoteFormat);
-			const filePath = `${fileName}.md`;
+			const filePath = normalizePath(`${fileName}.md`);
 
 			// Generate the template content
 			const content = this.generateDailyNoteContent(today);
@@ -85,7 +85,7 @@ export default class DailyWeeklyNotesPlugin extends Plugin {
 		try {
 			const today = moment();
 			const fileName = today.format(this.settings.weeklyNoteFormat);
-			const filePath = `${fileName}.md`;
+			const filePath = normalizePath(`${fileName}.md`);
 
 			// Generate the template content
 			const content = this.generateWeeklyNoteContent(today);
@@ -175,10 +175,10 @@ Next week - [[${nextWeek}]]
 			const file = this.app.vault.getAbstractFileByPath(filePath);
 
 			if (file instanceof TFile) {
-				// File exists, prepend content
-				const existingContent = await this.app.vault.read(file);
-				const newContent = content + '\n' + existingContent;
-				await this.app.vault.modify(file, newContent);
+				// File exists, prepend content using atomic process operation
+				await this.app.vault.process(file, (existingContent) => {
+					return content + '\n' + existingContent;
+				});
 				new Notice(`${noteType === 'daily' ? 'Daily' : 'Weekly'} note template added to existing file`);
 			} else {
 				// File doesn't exist, create it
@@ -211,8 +211,6 @@ class DailyWeeklyNotesSettingTab extends PluginSettingTab {
 		const {containerEl} = this;
 
 		containerEl.empty();
-
-		containerEl.createEl('h2', {text: 'Daily & Weekly Notes Settings'});
 
 		containerEl.createEl('p', {
 			text: 'Configure date formats using Moment.js format strings. ',
@@ -300,8 +298,8 @@ class DailyWeeklyNotesSettingTab extends PluginSettingTab {
 				}));
 
 		containerEl.createEl('br');
-		containerEl.createEl('h3', {text: 'Common Format Patterns'});
-		
+		new Setting(containerEl).setName('Common format patterns').setHeading();
+
 		const formatExamples = containerEl.createEl('ul');
 		formatExamples.createEl('li').setText('YYYY-MM-DD → 2026-01-06 (for daily notes)');
 		formatExamples.createEl('li').setText('YYYY/MM/DD → 2026/01/06 (for daily notes)');
