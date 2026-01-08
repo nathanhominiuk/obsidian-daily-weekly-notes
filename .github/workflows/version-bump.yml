@@ -1,0 +1,118 @@
+name: Version Bump and Tag
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+jobs:
+  version-bump:
+    # Only run if PR was merged (not just closed)
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18.x"
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Determine version bump type
+        id: bump-type
+        run: |
+          # Check PR labels for version bump type
+          # Default to patch if no label specified
+          LABELS='${{ toJson(github.event.pull_request.labels.*.name) }}'
+
+          if echo "$LABELS" | grep -q '"major"'; then
+            echo "bump=major" >> $GITHUB_OUTPUT
+          elif echo "$LABELS" | grep -q '"minor"'; then
+            echo "bump=minor" >> $GITHUB_OUTPUT
+          else
+            echo "bump=patch" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Bump version
+        id: version
+        run: |
+          # Get current version from package.json
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "Current version: $CURRENT_VERSION"
+
+          # Parse version components
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+
+          # Bump based on type
+          BUMP_TYPE="${{ steps.bump-type.outputs.bump }}"
+          case $BUMP_TYPE in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch)
+              PATCH=$((PATCH + 1))
+              ;;
+          esac
+
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          echo "New version: $NEW_VERSION"
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update version files
+        run: |
+          NEW_VERSION="${{ steps.version.outputs.version }}"
+
+          # Update package.json
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.version = '$NEW_VERSION';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, '\t') + '\n');
+          "
+
+          # Update manifest.json
+          node -e "
+            const fs = require('fs');
+            const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
+            manifest.version = '$NEW_VERSION';
+            fs.writeFileSync('manifest.json', JSON.stringify(manifest, null, '\t') + '\n');
+          "
+
+          # Update versions.json
+          node -e "
+            const fs = require('fs');
+            const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
+            const versions = JSON.parse(fs.readFileSync('versions.json', 'utf8'));
+            versions['$NEW_VERSION'] = manifest.minAppVersion;
+            fs.writeFileSync('versions.json', JSON.stringify(versions, null, '\t') + '\n');
+          "
+
+      - name: Commit and tag
+        run: |
+          NEW_VERSION="${{ steps.version.outputs.version }}"
+
+          git add package.json manifest.json versions.json
+          git commit -m "Bump version to $NEW_VERSION"
+          git tag -a "$NEW_VERSION" -m "$NEW_VERSION"
+
+      - name: Push changes and tag
+        run: |
+          git push origin main
+          git push origin --tags
