@@ -5,12 +5,16 @@ import type { Moment } from 'moment';
 declare const moment: typeof import('moment');
 
 interface DailyWeeklyNotesSettings {
+	dailyNotesFolder: string;
+	weeklyNotesFolder: string;
 	dailyNoteFormat: string;
 	weeklyNoteFormat: string;
 	weeklyDateRangeFormat: string;
 }
 
 const DEFAULT_SETTINGS: DailyWeeklyNotesSettings = {
+	dailyNotesFolder: '',
+	weeklyNotesFolder: '',
 	dailyNoteFormat: 'YYYY-MM-DD',
 	weeklyNoteFormat: 'GGGG - [Week] W',
 	weeklyDateRangeFormat: 'MMMM Do'
@@ -47,8 +51,16 @@ export default class DailyWeeklyNotesPlugin extends Plugin {
 	async loadSettings() {
 		const data = await this.loadData();
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
-		
+
 		// Validate and sanitize settings
+		// Folder paths: normalize and remove leading/trailing slashes
+		if (this.settings.dailyNotesFolder) {
+			this.settings.dailyNotesFolder = this.settings.dailyNotesFolder.trim().replace(/^\/+|\/+$/g, '');
+		}
+		if (this.settings.weeklyNotesFolder) {
+			this.settings.weeklyNotesFolder = this.settings.weeklyNotesFolder.trim().replace(/^\/+|\/+$/g, '');
+		}
+
 		if (!this.settings.dailyNoteFormat || this.settings.dailyNoteFormat.trim() === '') {
 			this.settings.dailyNoteFormat = DEFAULT_SETTINGS.dailyNoteFormat;
 		}
@@ -64,11 +76,44 @@ export default class DailyWeeklyNotesPlugin extends Plugin {
 		await this.saveData(this.settings);
 	}
 
+	/**
+	 * Build the full file path including folder and extension
+	 */
+	private buildFilePath(folder: string, fileName: string): string {
+		const fullPath = folder ? `${folder}/${fileName}.md` : `${fileName}.md`;
+		return normalizePath(fullPath);
+	}
+
+	/**
+	 * Build the link path for wiki links (without .md extension)
+	 */
+	private buildLinkPath(folder: string, fileName: string): string {
+		return folder ? `${folder}/${fileName}` : fileName;
+	}
+
+	/**
+	 * Ensure a folder exists, creating it if necessary
+	 */
+	private async ensureFolderExists(folderPath: string): Promise<void> {
+		if (!folderPath) return; // Vault root always exists
+
+		const normalizedPath = normalizePath(folderPath);
+		const folder = this.app.vault.getAbstractFileByPath(normalizedPath);
+		if (!folder) {
+			await this.app.vault.createFolder(normalizedPath);
+		}
+	}
+
 	async createDailyNote() {
 		try {
 			const today = moment();
 			const fileName = today.format(this.settings.dailyNoteFormat);
-			const filePath = normalizePath(`${fileName}.md`);
+
+			// Ensure the folder exists
+			await this.ensureFolderExists(this.settings.dailyNotesFolder);
+
+			// Build the file path with folder
+			const filePath = this.buildFilePath(this.settings.dailyNotesFolder, fileName);
 
 			// Generate the template content
 			const content = this.generateDailyNoteContent(today);
@@ -85,7 +130,12 @@ export default class DailyWeeklyNotesPlugin extends Plugin {
 		try {
 			const today = moment();
 			const fileName = today.format(this.settings.weeklyNoteFormat);
-			const filePath = normalizePath(`${fileName}.md`);
+
+			// Ensure the folder exists
+			await this.ensureFolderExists(this.settings.weeklyNotesFolder);
+
+			// Build the file path with folder
+			const filePath = this.buildFilePath(this.settings.weeklyNotesFolder, fileName);
 
 			// Generate the template content
 			const content = this.generateWeeklyNoteContent(today);
@@ -101,9 +151,16 @@ export default class DailyWeeklyNotesPlugin extends Plugin {
 	generateDailyNoteContent(date: Moment): string {
 		try {
 			const formattedDate = date.format('dddd MMMM Do, YYYY');
-			const weekLink = date.format(this.settings.weeklyNoteFormat);
-			const yesterday = date.clone().subtract(1, 'day').format(this.settings.dailyNoteFormat);
-			const tomorrow = date.clone().add(1, 'day').format(this.settings.dailyNoteFormat);
+
+			// Build link paths with folders
+			const weekFileName = date.format(this.settings.weeklyNoteFormat);
+			const weekLink = this.buildLinkPath(this.settings.weeklyNotesFolder, weekFileName);
+
+			const yesterdayFileName = date.clone().subtract(1, 'day').format(this.settings.dailyNoteFormat);
+			const yesterday = this.buildLinkPath(this.settings.dailyNotesFolder, yesterdayFileName);
+
+			const tomorrowFileName = date.clone().add(1, 'day').format(this.settings.dailyNoteFormat);
+			const tomorrow = this.buildLinkPath(this.settings.dailyNotesFolder, tomorrowFileName);
 
 			return `*${formattedDate}*
 
@@ -139,19 +196,23 @@ Tomorrow - [[${tomorrow}]]
 				dateRange = `${weekStart.format(this.settings.weeklyDateRangeFormat)} - ${weekEnd.format(this.settings.weeklyDateRangeFormat)}`;
 			}
 
-			// Generate links for each day of the week
+			// Generate links for each day of the week with folder paths
 			const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 			const dayLinks = daysOfWeek.map((dayName, index) => {
 				const dayDate = weekStart.clone().add(index, 'days');
-				return `${dayName} - [[${dayDate.format(this.settings.dailyNoteFormat)}]]`;
+				const dayFileName = dayDate.format(this.settings.dailyNoteFormat);
+				const dayLink = this.buildLinkPath(this.settings.dailyNotesFolder, dayFileName);
+				return `${dayName} - [[${dayLink}]]`;
 			}).join('\n');
 
-			// Previous and next week links
+			// Previous and next week links with folder paths
 			const lastWeekDate = date.clone().subtract(1, 'week');
-			const lastWeek = lastWeekDate.format(this.settings.weeklyNoteFormat);
-			
+			const lastWeekFileName = lastWeekDate.format(this.settings.weeklyNoteFormat);
+			const lastWeek = this.buildLinkPath(this.settings.weeklyNotesFolder, lastWeekFileName);
+
 			const nextWeekDate = date.clone().add(1, 'week');
-			const nextWeek = nextWeekDate.format(this.settings.weeklyNoteFormat);
+			const nextWeekFileName = nextWeekDate.format(this.settings.weeklyNoteFormat);
+			const nextWeek = this.buildLinkPath(this.settings.weeklyNotesFolder, nextWeekFileName);
 
 			return `*${dateRange}*
 
@@ -211,6 +272,66 @@ class DailyWeeklyNotesSettingTab extends PluginSettingTab {
 		const {containerEl} = this;
 
 		containerEl.empty();
+
+		// Folder locations section
+		new Setting(containerEl).setName('Folder locations').setHeading();
+
+		// Daily notes folder setting
+		const dailyFolderPreview = containerEl.createDiv('setting-item-description');
+		const dailyFileName = moment().format(this.plugin.settings.dailyNoteFormat);
+		const dailyFolderPath = this.plugin.settings.dailyNotesFolder
+			? `${this.plugin.settings.dailyNotesFolder}/${dailyFileName}.md`
+			: `${dailyFileName}.md`;
+		dailyFolderPreview.setText(`Example path: ${dailyFolderPath}`);
+
+		new Setting(containerEl)
+			.setName('Daily notes folder')
+			.setDesc('Folder where daily notes will be created (leave empty for vault root)')
+			.addText(text => text
+				.setPlaceholder('e.g., Daily Notes')
+				.setValue(this.plugin.settings.dailyNotesFolder)
+				.onChange(async (value) => {
+					// Sanitize: remove leading/trailing slashes
+					const sanitized = value.trim().replace(/^\/+|\/+$/g, '');
+					this.plugin.settings.dailyNotesFolder = sanitized;
+					await this.plugin.saveSettings();
+					// Update preview
+					const fileName = moment().format(this.plugin.settings.dailyNoteFormat);
+					const path = sanitized ? `${sanitized}/${fileName}.md` : `${fileName}.md`;
+					dailyFolderPreview.setText(`Example path: ${path}`);
+				}));
+
+		containerEl.createEl('br');
+
+		// Weekly notes folder setting
+		const weeklyFolderPreview = containerEl.createDiv('setting-item-description');
+		const weeklyFileName = moment().format(this.plugin.settings.weeklyNoteFormat);
+		const weeklyFolderPath = this.plugin.settings.weeklyNotesFolder
+			? `${this.plugin.settings.weeklyNotesFolder}/${weeklyFileName}.md`
+			: `${weeklyFileName}.md`;
+		weeklyFolderPreview.setText(`Example path: ${weeklyFolderPath}`);
+
+		new Setting(containerEl)
+			.setName('Weekly notes folder')
+			.setDesc('Folder where weekly notes will be created (leave empty for vault root)')
+			.addText(text => text
+				.setPlaceholder('e.g., Weekly Notes')
+				.setValue(this.plugin.settings.weeklyNotesFolder)
+				.onChange(async (value) => {
+					// Sanitize: remove leading/trailing slashes
+					const sanitized = value.trim().replace(/^\/+|\/+$/g, '');
+					this.plugin.settings.weeklyNotesFolder = sanitized;
+					await this.plugin.saveSettings();
+					// Update preview
+					const fileName = moment().format(this.plugin.settings.weeklyNoteFormat);
+					const path = sanitized ? `${sanitized}/${fileName}.md` : `${fileName}.md`;
+					weeklyFolderPreview.setText(`Example path: ${path}`);
+				}));
+
+		containerEl.createEl('br');
+
+		// Date formats section
+		new Setting(containerEl).setName('Date formats').setHeading();
 
 		containerEl.createEl('p', {
 			text: 'Configure date formats using Moment.js format strings. ',
