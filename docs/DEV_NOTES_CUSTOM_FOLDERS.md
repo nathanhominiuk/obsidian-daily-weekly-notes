@@ -279,10 +279,58 @@ Per CONTRIBUTING.md, version numbers are NOT manually updated. GitHub Actions wi
 
 ---
 
+## Repository Reorganization
+
+After the custom folder feature implementation, the repository was reorganized:
+
+### New Structure
+```
+├── src/                 # Source code
+│   ├── main.ts          # Plugin source code
+│   ├── esbuild.config.mjs
+│   ├── tsconfig.json
+│   └── version-bump.mjs
+├── docs/                # Documentation (this file is here)
+│   ├── CHANGELOG.md
+│   ├── CONTRIBUTING.md
+│   ├── DEV_NOTES_CUSTOM_FOLDERS.md
+│   ├── DEPENDENCY_UPDATE_NOTES.md
+│   ├── GUIDELINES_REVIEW_NOTES.md
+│   └── INSTALL.md
+├── main.js              # Built plugin (output)
+├── manifest.json        # Plugin manifest
+├── styles.css           # Plugin styles
+├── versions.json        # Obsidian version compatibility
+├── package.json
+├── README.md
+└── LICENSE
+```
+
+### Files Removed
+- `build-with-podman.sh` - Podman build script
+- `build-with-podman.bat` - Podman build script (Windows)
+- `podman-compose.yml` - Podman compose config
+- `BUILD_WITH_PODMAN.md` - Podman documentation
+- `/outputs/` directory - Old build output location
+
+### Configuration Changes
+- `src/esbuild.config.mjs`: Updated entry point to `src/main.ts`
+- `src/tsconfig.json`: Updated baseUrl to `..` for node_modules resolution
+- `package.json`: Updated script paths to use `src/` prefix
+
+---
+
 ## Commit History
 
-### Initial Commit
+### Commit 1: Custom Folder Feature
 - Implemented custom folder locations feature
 - Added settings UI for folder configuration
 - Updated CHANGELOG.md
 - Created DEV_NOTES_CUSTOM_FOLDERS.md
+
+### Commit 2: Repository Reorganization
+- Removed Podman build support
+- Created /src directory for source code
+- Created /docs directory for documentation
+- Updated build configuration for new structure
+- Updated README.md with new structure

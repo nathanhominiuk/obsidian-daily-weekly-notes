@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Settings panel reorganized with "Folder locations" and "Date formats" sections
 - Notes are no longer limited to vault root - can be organized in any folder
+- Repository reorganized: source code moved to `/src`, documentation moved to `/docs`
+
+### Removed
+- Removed Podman build support (builds now handled via GitHub Actions)
+- Removed `/outputs` directory (build outputs now in root)
 
 ## [0.2.3] - 2026-01-08
 
