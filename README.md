@@ -26,6 +26,7 @@ An Obsidian plugin that creates templated daily and weekly notes the way I want 
 - Fully customizable date format via settings
 
 ### Customizable Settings
+- Configure custom folder locations for daily and weekly notes
 - Configure daily note filename format
 - Configure weekly note filename format
 - Configure weekly date range display format
@@ -48,16 +49,6 @@ An Obsidian plugin that creates templated daily and weekly notes the way I want 
 ### Building from Source
 
 If you want to build the plugin yourself or contribute to development:
-
-#### Using Podman (No Node.js installation required)
-
-```bash
-./build-with-podman.sh
-```
-
-See [BUILD_WITH_PODMAN.md](BUILD_WITH_PODMAN.md) for detailed instructions.
-
-#### Using Node.js/NPM
 
 1. Clone this repository
 2. Navigate to the plugin folder
@@ -167,10 +158,27 @@ If a daily or weekly note already exists, the plugin will:
 ## Known Limitations
 
 - Date formats must be valid Moment.js format strings
-- Plugin creates notes in the vault root (folder customization coming in future version)
 - Templates are fixed (custom template support coming in future version)
 
 ## Development
+
+### Repository Structure
+
+```
+├── src/                 # Source code
+│   ├── main.ts          # Plugin source code
+│   ├── esbuild.config.mjs
+│   ├── tsconfig.json
+│   └── version-bump.mjs
+├── docs/                # Documentation
+│   ├── CHANGELOG.md
+│   ├── CONTRIBUTING.md
+│   └── ...
+├── main.js              # Built plugin (output)
+├── manifest.json        # Plugin manifest
+├── styles.css           # Plugin styles
+└── README.md
+```
 
 ### Building
 
@@ -184,10 +192,6 @@ npm run build
 npm run dev
 ```
 
-### Using Podman for Development
-
-See [BUILD_WITH_PODMAN.md](BUILD_WITH_PODMAN.md) for containerized build instructions.
-
 ## Support
 
 If you encounter any issues or have feature requests, please [open an issue on GitHub](https://github.com/nathanhominiuk/daily-weekly-notes/issues).
@@ -195,7 +199,6 @@ If you encounter any issues or have feature requests, please [open an issue on G
 ## Roadmap
 
 Future features under consideration:
-- Custom folder locations for daily and weekly notes
 - Customizable templates
 - Support for monthly notes
 - Quarterly notes

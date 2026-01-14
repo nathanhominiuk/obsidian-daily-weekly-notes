@@ -5,6 +5,23 @@ All notable changes to the Daily & Weekly Notes Creator plugin will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Custom folder locations for daily and weekly notes
+- Settings UI to configure daily notes folder and weekly notes folder separately
+- Automatic folder creation when specified folder doesn't exist
+- Wiki links in generated content now include folder paths for proper cross-linking
+
+### Changed
+- Settings panel reorganized with "Folder locations" and "Date formats" sections
+- Notes are no longer limited to vault root - can be organized in any folder
+- Repository reorganized: source code moved to `/src`, documentation moved to `/docs`
+
+### Removed
+- Removed Podman build support (builds now handled via GitHub Actions)
+- Removed `/outputs` directory (build outputs now in root)
+
 ## [0.2.3] - 2026-01-08
 
 ### Added
@@ -78,10 +95,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Settings persistence via Obsidian's data.json
 - Works on both desktop and mobile
 
-## [Unreleased]
-
-### Planned Features
-- Custom folder locations for daily and weekly notes
+## Planned Features
 - Customizable templates
 - Support for monthly notes
 - Support for quarterly notes
