@@ -102,6 +102,12 @@ describe('generateWeeklyNoteContent', () => {
 	let plugin: DailyWeeklyNotesPlugin;
 	beforeEach(() => { plugin = createPlugin(); });
 
+	it('should include daily and weekly tags in frontmatter', () => {
+		const date = moment('2026-01-06');
+		const content = plugin.generateWeeklyNoteContent(date);
+		expect(content).toMatch(/^---\ntags: \[daily, weekly\]\n---\n/);
+	});
+
 	it('should contain the date range for same-month weeks', () => {
 		const date = moment('2026-01-06'); // Week of Jan 5-11
 		const content = plugin.generateWeeklyNoteContent(date);

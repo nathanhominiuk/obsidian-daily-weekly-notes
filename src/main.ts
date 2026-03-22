@@ -217,7 +217,10 @@ Tomorrow - [[${tomorrow}]]
 			const nextWeekFileName = nextWeekDate.format(this.settings.weeklyNoteFormat);
 			const nextWeek = this.buildLinkPath(this.settings.weeklyNotesFolder, nextWeekFileName);
 
-			return `*${dateRange}*
+			return `---
+tags: [daily, weekly]
+---
+*${dateRange}*
 
 Last week - [[${lastWeek}]]
 

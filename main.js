@@ -15,7 +15,10 @@ Tomorrow - [[${F}]]
 ---
 
 `}catch(t){throw console.error("Error generating daily note content:",t),new Error("Invalid date format settings")}}generateWeeklyNoteContent(e){try{let t=e.clone().isoWeekday(1),i=t.clone().add(6,"days"),a;if(t.month()===i.month()){let y=this.settings.weeklyDateRangeFormat,r=y.includes(" ")&&y.split(" ").pop()||"Do";a=`${t.format(y)} - ${i.format(r)}`}else a=`${t.format(this.settings.weeklyDateRangeFormat)} - ${i.format(this.settings.weeklyDateRangeFormat)}`;let c=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].map((y,r)=>{let l=t.clone().add(r,"days").format(this.settings.dailyNoteFormat),o=this.buildLinkPath(this.settings.dailyNotesFolder,l);return`${y} - [[${o}]]`}).join(`
-`),F=e.clone().subtract(1,"week").format(this.settings.weeklyNoteFormat),h=this.buildLinkPath(this.settings.weeklyNotesFolder,F),w=e.clone().add(1,"week").format(this.settings.weeklyNoteFormat),f=this.buildLinkPath(this.settings.weeklyNotesFolder,w);return`*${a}*
+`),F=e.clone().subtract(1,"week").format(this.settings.weeklyNoteFormat),h=this.buildLinkPath(this.settings.weeklyNotesFolder,F),w=e.clone().add(1,"week").format(this.settings.weeklyNoteFormat),f=this.buildLinkPath(this.settings.weeklyNotesFolder,w);return`---
+tags: [daily, weekly]
+---
+*${a}*
 
 Last week - [[${h}]]
 
