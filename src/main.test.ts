@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import moment from 'moment';
+import { TFile } from 'obsidian';
 import DailyWeeklyNotesPlugin from './main';
 
 function createPlugin(): DailyWeeklyNotesPlugin {
@@ -12,6 +13,9 @@ function createPlugin(): DailyWeeklyNotesPlugin {
 		},
 		workspace: {
 			getLeaf: () => ({ openFile: async () => {} }),
+		},
+		commands: {
+			executeCommandById: vi.fn(),
 		},
 	};
 	const mockManifest = { id: 'daily-weekly-notes', name: 'Test', version: '0.0.1' };
@@ -160,5 +164,43 @@ describe('generateWeeklyNoteContent', () => {
 		const date = moment('2026-01-06');
 		const content = plugin.generateWeeklyNoteContent(date);
 		expect(content.trimEnd()).toMatch(/---$/);
+	});
+});
+
+describe('createOrUpdateNote', () => {
+	it('should invoke linter after creating a new note', async () => {
+		const plugin = createPlugin();
+		const mockFile = Object.create(TFile.prototype);
+		mockFile.path = 'test.md';
+		let callCount = 0;
+		(plugin.app.vault as any).getAbstractFileByPath = () => {
+			callCount++;
+			// First call: check if file exists (return null = doesn't exist)
+			// Second call: get created file (return TFile instance)
+			return callCount === 1 ? null : mockFile;
+		};
+		(plugin.app.vault as any).create = vi.fn().mockResolvedValue(undefined);
+
+		await plugin.createOrUpdateNote('test.md', 'content', 'daily');
+
+		expect(plugin.app.commands.executeCommandById).toHaveBeenCalledWith('linter:lint-file');
+	});
+
+	it('should not throw when linter is unavailable', async () => {
+		const plugin = createPlugin();
+		const mockFile = Object.create(TFile.prototype);
+		mockFile.path = 'test.md';
+		let callCount = 0;
+		(plugin.app.vault as any).getAbstractFileByPath = () => {
+			callCount++;
+			return callCount === 1 ? null : mockFile;
+		};
+		(plugin.app.vault as any).create = vi.fn().mockResolvedValue(undefined);
+		plugin.app.commands.executeCommandById.mockImplementation(() => {
+			throw new Error('Command not found');
+		});
+
+		await expect(plugin.createOrUpdateNote('test.md', 'content', 'daily'))
+			.resolves.not.toThrow();
 	});
 });

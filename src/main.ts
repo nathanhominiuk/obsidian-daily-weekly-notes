@@ -258,6 +258,13 @@ Next week - [[${nextWeek}]]
 			const createdFile = this.app.vault.getAbstractFileByPath(filePath);
 			if (createdFile instanceof TFile) {
 				await this.app.workspace.getLeaf().openFile(createdFile);
+
+				// Invoke linter if available
+				try {
+					(this.app as any).commands.executeCommandById('linter:lint-file');
+				} catch (e) {
+					console.debug('Linter plugin not available:', e);
+				}
 			}
 		} catch (error) {
 			console.error('Error creating/updating note:', error);
