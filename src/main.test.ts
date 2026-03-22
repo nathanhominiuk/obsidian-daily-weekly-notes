@@ -59,7 +59,13 @@ describe('generateDailyNoteContent', () => {
 	it('should include daily tag in frontmatter', () => {
 		const date = moment('2026-01-06');
 		const content = plugin.generateDailyNoteContent(date);
-		expect(content).toMatch(/^---\ntags: \[daily\]\n---\n/);
+		expect(content).toMatch(/^---\ntags: \[daily\]\n/);
+	});
+
+	it('should include mobility property in frontmatter', () => {
+		const date = moment('2026-01-06');
+		const content = plugin.generateDailyNoteContent(date);
+		expect(content).toMatch(/^---\ntags: \[daily\]\nmobility: false\n---\n/);
 	});
 
 	it('should contain the formatted date', () => {

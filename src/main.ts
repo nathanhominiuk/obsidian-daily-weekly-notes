@@ -164,6 +164,7 @@ export default class DailyWeeklyNotesPlugin extends Plugin {
 
 			return `---
 tags: [daily]
+mobility: false
 ---
 *${formattedDate}*
 
