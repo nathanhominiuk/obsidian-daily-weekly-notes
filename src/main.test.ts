@@ -56,6 +56,12 @@ describe('generateDailyNoteContent', () => {
 	let plugin: DailyWeeklyNotesPlugin;
 	beforeEach(() => { plugin = createPlugin(); });
 
+	it('should include daily tag in frontmatter', () => {
+		const date = moment('2026-01-06');
+		const content = plugin.generateDailyNoteContent(date);
+		expect(content).toMatch(/^---\ntags: \[daily\]\n---\n/);
+	});
+
 	it('should contain the formatted date', () => {
 		const date = moment('2026-01-06');
 		const content = plugin.generateDailyNoteContent(date);

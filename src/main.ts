@@ -162,7 +162,10 @@ export default class DailyWeeklyNotesPlugin extends Plugin {
 			const tomorrowFileName = date.clone().add(1, 'day').format(this.settings.dailyNoteFormat);
 			const tomorrow = this.buildLinkPath(this.settings.dailyNotesFolder, tomorrowFileName);
 
-			return `*${formattedDate}*
+			return `---
+tags: [daily]
+---
+*${formattedDate}*
 
 Week - [[${weekLink}]]
 Yesterday - [[${yesterday}]]
