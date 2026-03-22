@@ -10,6 +10,7 @@ interface DailyWeeklyNotesSettings {
 	dailyNoteFormat: string;
 	weeklyNoteFormat: string;
 	weeklyDateRangeFormat: string;
+	bookmarkManagedFolders: string;
 }
 
 const DEFAULT_SETTINGS: DailyWeeklyNotesSettings = {
@@ -17,7 +18,8 @@ const DEFAULT_SETTINGS: DailyWeeklyNotesSettings = {
 	weeklyNotesFolder: '',
 	dailyNoteFormat: 'YYYY-MM-DD',
 	weeklyNoteFormat: 'GGGG - [Week] W',
-	weeklyDateRangeFormat: 'MMMM Do'
+	weeklyDateRangeFormat: 'MMMM Do',
+	bookmarkManagedFolders: ''
 }
 
 export default class DailyWeeklyNotesPlugin extends Plugin {
@@ -266,10 +268,63 @@ Next week - [[${nextWeek}]]
 					console.debug('Linter plugin not available:', e);
 				}
 			}
+
+			// Manage bookmarks if configured
+			await this.manageBookmarks(filePath, noteType);
 		} catch (error) {
 			console.error('Error creating/updating note:', error);
 			new Notice(`Failed to create ${noteType} note. The file may be open in another program or the format may be invalid.`);
 			throw error;
+		}
+	}
+
+	/**
+	 * Manage bookmarks for the current note. Removes old bookmarks in managed
+	 * folders and adds a bookmark for the newly created note.
+	 */
+	async manageBookmarks(filePath: string, noteType: string) {
+		try {
+			if (!this.settings.bookmarkManagedFolders.trim()) return;
+
+			const managedFolders = this.settings.bookmarkManagedFolders
+				.split(',')
+				.map(f => f.trim())
+				.filter(f => f.length > 0);
+
+			// Determine which folder the current note is in
+			const noteFolder = noteType === 'daily'
+				? this.settings.dailyNotesFolder
+				: this.settings.weeklyNotesFolder;
+
+			// Only proceed if the note's folder is in the managed list
+			const isManaged = managedFolders.some(f => f === noteFolder || f === (noteFolder || '/'));
+			if (!isManaged) return;
+
+			const bookmarksPlugin = (this.app as any).internalPlugins?.getPluginById('bookmarks');
+			if (!bookmarksPlugin?.enabled) return;
+			const instance = bookmarksPlugin.instance;
+			if (!instance) return;
+
+			// Remove old file bookmarks in the managed folder
+			const prefix = noteFolder ? `${noteFolder}/` : '';
+			const items = instance.items || [];
+			for (let i = items.length - 1; i >= 0; i--) {
+				const item = items[i];
+				if (item.type === 'file' && item.path?.endsWith('.md')) {
+					const inFolder = prefix
+						? item.path.startsWith(prefix)
+						: !item.path.includes('/');
+					if (inFolder) {
+						instance.removeItem(item);
+					}
+				}
+			}
+
+			// Add bookmark for the current note
+			instance.addItem({ type: 'file', path: filePath });
+			instance.save();
+		} catch (e) {
+			console.debug('Bookmarks plugin not available:', e);
 		}
 	}
 }
@@ -340,6 +395,22 @@ class DailyWeeklyNotesSettingTab extends PluginSettingTab {
 					const fileName = moment().format(this.plugin.settings.weeklyNoteFormat);
 					const path = sanitized ? `${sanitized}/${fileName}.md` : `${fileName}.md`;
 					weeklyFolderPreview.setText(`Example path: ${path}`);
+				}));
+
+		containerEl.createEl('br');
+
+		// Bookmark management section
+		new Setting(containerEl).setName('Bookmark management').setHeading();
+
+		new Setting(containerEl)
+			.setName('Bookmark managed folders')
+			.setDesc('Comma-separated list of folders where old bookmarks are removed and current notes are bookmarked automatically. Leave empty to disable.')
+			.addText(text => text
+				.setPlaceholder('e.g., Daily Notes, Weekly Notes')
+				.setValue(this.plugin.settings.bookmarkManagedFolders)
+				.onChange(async (value) => {
+					this.plugin.settings.bookmarkManagedFolders = value;
+					await this.plugin.saveSettings();
 				}));
 
 		containerEl.createEl('br');
