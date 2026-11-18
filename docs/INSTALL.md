@@ -28,7 +28,7 @@ This will create the `main.js` file needed to run the plugin.
 
 4. Go to Settings → Community Plugins
 
-5. Enable "Daily & Weekly Notes"
+5. Enable "Daily and Weekly Notes Creator"
 
 ### Step 3: Use the Plugin
 

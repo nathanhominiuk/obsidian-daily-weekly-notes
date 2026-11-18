@@ -1,4 +1,4 @@
-# Contributing to Daily & Weekly Notes Creator
+# Contributing to Daily and Weekly Notes Creator
 
 ## Pull Request Checklist
 

@@ -1,4 +1,4 @@
-# Daily & Weekly Notes Creator for Obsidian
+# Daily and Weekly Notes Creator for Obsidian
 
 An Obsidian plugin that creates templated daily and weekly notes the way I want them. 
 
@@ -49,7 +49,7 @@ Obsidian 1.13.0 or later. Older Obsidian versions keep receiving plugin version 
 2. Create a folder named `daily-weekly-notes` in your vault's `.obsidian/plugins/` directory
 3. Copy the release files into this folder
 4. Restart Obsidian
-5. Go to Settings → Community Plugins and enable "Daily & Weekly Notes Creator"
+5. Go to Settings → Community Plugins and enable "Daily and Weekly Notes Creator"
 
 ### Building from Source
 
@@ -111,7 +111,7 @@ Next week - [[2026 - Week 3]]
 
 ## Configuration
 
-Access the plugin settings through Settings → Community Plugins → Daily & Weekly Notes Creator.
+Access the plugin settings through Settings → Community Plugins → Daily and Weekly Notes Creator.
 
 ### Date Format Options
 

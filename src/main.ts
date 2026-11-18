@@ -24,16 +24,6 @@ const DEFAULT_SETTINGS: DailyWeeklyNotesSettings = {
 const FORMAT_REFERENCE_URL = 'https://momentjs.com/docs/#/displaying/format/';
 
 /**
- * The command registry is not in the public API. It is optional here so a
- * future Obsidian change degrades to a no-op.
- */
-interface InternalApp extends App {
-	commands?: {
-		executeCommandById(id: string): boolean;
-	};
-}
-
-/**
  * Obsidian's bundled Moment.js. Its typings are a namespace import, which
  * TypeScript no longer treats as callable, hence the cast.
  */
@@ -215,17 +205,6 @@ Next week - [[${nextWeek}]]
 		}
 
 		await this.app.workspace.getLeaf().openFile(file);
-
-		this.runLinter();
-	}
-
-	/** Run the Linter community plugin on the open note, if it is installed. */
-	private runLinter() {
-		try {
-			(this.app as InternalApp).commands?.executeCommandById('linter:lint-file');
-		} catch (e) {
-			console.debug('Linter plugin not available:', e);
-		}
 	}
 }
 

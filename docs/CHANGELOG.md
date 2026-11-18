@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the Daily & Weekly Notes Creator plugin will be documented in this file.
+All notable changes to the Daily and Weekly Notes Creator plugin will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- Plugin renamed from "Daily & Weekly Notes Creator" to "Daily and Weekly Notes Creator" to follow Obsidian's naming rules. The plugin ID is unchanged
 - **Requires Obsidian 1.13.0** (was 0.15.0). Older Obsidian versions keep receiving 0.3.1 through `versions.json`
 - Settings tab rewritten with Obsidian's declarative settings API: folder pickers with suggestions, built-in date format previews, and settings that show up in settings search
 - Folder and date format settings are cleaned up when used rather than when saved; an empty format falls back to its default
@@ -23,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A failed note creation showed two error notices
 
 ### Removed
+- Automatic run of the Linter plugin after creating a note; lint manually instead
 - Automatic bookmark management and its "Bookmark managed folders" setting. Existing bookmarks are left as they are
 - Empty `styles.css`, unused `tslib`, and the "Common format patterns" list in settings (the README keeps it)
 

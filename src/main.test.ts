@@ -4,7 +4,6 @@ import { TFile } from 'obsidian';
 import DailyWeeklyNotesPlugin, { DailyWeeklyNotesSettingTab } from './main';
 
 function createPlugin() {
-	const executeCommandById = vi.fn();
 	const mockApp = {
 		vault: {
 			getFileByPath: () => null,
@@ -16,7 +15,6 @@ function createPlugin() {
 		workspace: {
 			getLeaf: () => ({ openFile: async () => {} }),
 		},
-		commands: { executeCommandById },
 	};
 	const mockManifest = { id: 'daily-weekly-notes', name: 'Test', version: '0.0.1' };
 	const plugin = new DailyWeeklyNotesPlugin(mockApp as any, mockManifest as any);
@@ -220,13 +218,12 @@ describe('createNote', () => {
 });
 
 describe('createOrUpdateNote', () => {
-	it('should invoke linter after creating a new note', async () => {
+	it('should create a new note', async () => {
 		const plugin = createPlugin();
 
 		await plugin.createOrUpdateNote('test.md', 'content', 'daily');
 
 		expect(plugin.mockApp.vault.create).toHaveBeenCalledWith('test.md', 'content');
-		expect(plugin.mockApp.commands.executeCommandById).toHaveBeenCalledWith('linter:lint-file');
 	});
 
 	it('should prepend the template when the note already exists', async () => {
@@ -240,18 +237,6 @@ describe('createOrUpdateNote', () => {
 		const [file, transform] = plugin.mockApp.vault.process.mock.calls[0] as unknown as [TFile, (data: string) => string];
 		expect(file).toBe(existing);
 		expect(transform('old')).toBe('content\nold');
-	});
-
-	it('should not throw when linter is unavailable', async () => {
-		const plugin = createPlugin();
-		plugin.mockApp.commands.executeCommandById.mockImplementation(() => {
-			throw new Error('Command not found');
-		});
-		const consoleDebug = vi.spyOn(console, 'debug').mockImplementation(() => {});
-
-		await expect(plugin.createOrUpdateNote('test.md', 'content', 'daily'))
-			.resolves.toBeUndefined();
-		consoleDebug.mockRestore();
 	});
 });
 
