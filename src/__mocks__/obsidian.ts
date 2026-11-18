@@ -1,3 +1,7 @@
+import moment from 'moment';
+
+export { moment };
+
 export class Plugin {
 	app: any;
 	manifest: any;
@@ -14,24 +18,10 @@ export class Plugin {
 export class PluginSettingTab {
 	app: any;
 	plugin: any;
-	containerEl: any = {
-		empty() {},
-		createDiv() { return { setText() {} }; },
-		createEl() { return { setText() {}, setAttr() {} }; }
-	};
 	constructor(app: any, plugin: any) {
 		this.app = app;
 		this.plugin = plugin;
 	}
-	display() {}
-}
-
-export class Setting {
-	constructor(_el: any) {}
-	setName() { return this; }
-	setDesc() { return this; }
-	setHeading() { return this; }
-	addText() { return this; }
 }
 
 export class TFile {

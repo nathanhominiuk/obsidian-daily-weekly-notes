@@ -26,12 +26,18 @@ An Obsidian plugin that creates templated daily and weekly notes the way I want 
 - Fully customizable date format via settings
 
 ### Customizable Settings
-- Configure custom folder locations for daily and weekly notes
+- Configure custom folder locations for daily and weekly notes, with folder suggestions
 - Configure daily note filename format
 - Configure weekly note filename format
 - Configure weekly date range display format
 - Live preview of format changes
 - Uses Moment.js format strings for maximum flexibility
+- Settings are findable from Obsidian's settings search
+- Optionally keep a bookmark on the current daily and weekly note
+
+## Requirements
+
+Obsidian 1.13.0 or later. Older Obsidian versions keep receiving plugin version 0.3.1.
 
 ## Installation
 
@@ -40,7 +46,7 @@ An Obsidian plugin that creates templated daily and weekly notes the way I want 
 
 ### Manual Installation
 
-1. Download the latest release files (`main.js`, `manifest.json`, `styles.css`)
+1. Download the latest release files (`main.js`, `manifest.json`)
 2. Create a folder named `daily-weekly-notes` in your vault's `.obsidian/plugins/` directory
 3. Copy the release files into this folder
 4. Restart Obsidian
@@ -54,14 +60,14 @@ If you want to build the plugin yourself or contribute to development:
 2. Navigate to the plugin folder
 3. Install dependencies: `npm install`
 4. Build the plugin: `npm run build`
-5. Copy `main.js`, `manifest.json`, and `styles.css` to your vault's `.obsidian/plugins/daily-weekly-notes/` folder
+5. Copy `main.js` and `manifest.json` to your vault's `.obsidian/plugins/daily-weekly-notes/` folder
 
 ## Usage
 
 ### Creating Daily Notes
 
 1. Open the Command Palette (Ctrl/Cmd + P)
-2. Search for "Create Daily Note"
+2. Search for "Create daily note"
 3. Press Enter
 
 The plugin will create a note named with today's date (e.g., `2026-01-06.md`) with the following format:
@@ -80,7 +86,7 @@ Tomorrow - [[2026-01-07]]
 ### Creating Weekly Notes
 
 1. Open the Command Palette (Ctrl/Cmd + P)
-2. Search for "Create Weekly Note"
+2. Search for "Create weekly note"
 3. Press Enter
 
 The plugin will create a note named with the ISO week (e.g., `2026 - Week 2.md`) with the following format:
@@ -127,10 +133,12 @@ Configure three different date formats:
    - Default: `MMMM Do`
    - Example: `January 6th`
 
+Leaving a format empty uses its default. Each format shows a live preview next to it.
+
 ### Common Format Patterns
 
 - `YYYY-MM-DD` → 2026-01-06 (for daily notes)
-- `YYYY/MM/DD` → 2026/01/06 (for daily notes)
+- `YYYY/MM/DD` → 2026/01/06 (for daily notes; creates year and month subfolders)
 - `YYYYMMDD` → 20260106 (for daily notes)
 - `GGGG-[W]W` → 2026-W2 (for weekly notes)
 - `GGGG - [Week] W` → 2026 - Week 2 (for weekly notes)
@@ -174,9 +182,9 @@ If a daily or weekly note already exists, the plugin will:
 │   ├── CHANGELOG.md
 │   ├── CONTRIBUTING.md
 │   └── ...
-├── main.js              # Built plugin (output)
+├── main.js              # Built plugin (build output, not committed)
 ├── manifest.json        # Plugin manifest
-├── styles.css           # Plugin styles
+├── eslint.config.mjs    # Lint rules, including Obsidian's review checks
 └── README.md
 ```
 
@@ -190,6 +198,18 @@ npm run build
 
 ```bash
 npm run dev
+```
+
+### Checks
+
+`npm run lint` runs the same checks as the Obsidian community directory review.
+
+```bash
+npm run lint
+```
+
+```bash
+npm test
 ```
 
 ## Support
