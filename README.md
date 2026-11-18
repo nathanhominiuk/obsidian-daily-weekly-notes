@@ -33,7 +33,6 @@ An Obsidian plugin that creates templated daily and weekly notes the way I want 
 - Live preview of format changes
 - Uses Moment.js format strings for maximum flexibility
 - Settings are findable from Obsidian's settings search
-- Optionally keep a bookmark on the current daily and weekly note
 
 ## Requirements
 

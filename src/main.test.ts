@@ -26,7 +26,6 @@ function createPlugin() {
 		dailyNoteFormat: 'YYYY-MM-DD',
 		weeklyNoteFormat: 'GGGG - [Week] W',
 		weeklyDateRangeFormat: 'MMMM Do',
-		bookmarkManagedFolders: '',
 	};
 	return Object.assign(plugin, { mockApp });
 }
@@ -256,69 +255,6 @@ describe('createOrUpdateNote', () => {
 	});
 });
 
-describe('manageBookmarks', () => {
-	it('should not manage bookmarks when bookmarkManagedFolders is empty', async () => {
-		const plugin = createPlugin();
-		const mockInstance = { items: [], addItem: vi.fn(), removeItem: vi.fn(), save: vi.fn() };
-		(plugin.app as any).internalPlugins = {
-			getPluginById: () => ({ enabled: true, instance: mockInstance }),
-		};
-		plugin.settings.bookmarkManagedFolders = '';
-
-		plugin.manageBookmarks('test.md', 'daily');
-
-		expect(mockInstance.addItem).not.toHaveBeenCalled();
-	});
-
-	it('should add bookmark when folder is in managed list', async () => {
-		const plugin = createPlugin();
-		const mockInstance = { items: [], addItem: vi.fn(), removeItem: vi.fn(), save: vi.fn() };
-		(plugin.app as any).internalPlugins = {
-			getPluginById: () => ({ enabled: true, instance: mockInstance }),
-		};
-		plugin.settings.dailyNotesFolder = 'Daily';
-		plugin.settings.bookmarkManagedFolders = 'Daily, Weekly';
-
-		plugin.manageBookmarks('Daily/2026-01-06.md', 'daily');
-
-		expect(mockInstance.addItem).toHaveBeenCalledWith({ type: 'file', path: 'Daily/2026-01-06.md' });
-		expect(mockInstance.save).toHaveBeenCalled();
-	});
-
-	it('should remove old bookmarks in the managed folder', async () => {
-		const plugin = createPlugin();
-		const oldBookmark = { type: 'file', path: 'Daily/2026-01-05.md' };
-		const unrelatedBookmark = { type: 'file', path: 'Other/note.md' };
-		const mockInstance = {
-			items: [oldBookmark, unrelatedBookmark],
-			addItem: vi.fn(),
-			removeItem: vi.fn(),
-			save: vi.fn(),
-		};
-		(plugin.app as any).internalPlugins = {
-			getPluginById: () => ({ enabled: true, instance: mockInstance }),
-		};
-		plugin.settings.dailyNotesFolder = 'Daily';
-		plugin.settings.bookmarkManagedFolders = 'Daily';
-
-		plugin.manageBookmarks('Daily/2026-01-06.md', 'daily');
-
-		expect(mockInstance.removeItem).toHaveBeenCalledWith(oldBookmark);
-		expect(mockInstance.removeItem).not.toHaveBeenCalledWith(unrelatedBookmark);
-	});
-
-	it('should handle bookmarks plugin being unavailable', async () => {
-		const plugin = createPlugin();
-		(plugin.app as any).internalPlugins = {
-			getPluginById: () => null,
-		};
-		plugin.settings.bookmarkManagedFolders = 'Daily';
-		plugin.settings.dailyNotesFolder = 'Daily';
-
-		expect(() => plugin.manageBookmarks('Daily/test.md', 'daily')).not.toThrow();
-	});
-});
-
 describe('settings tab', () => {
 	it('should bind every control to an existing setting', () => {
 		const plugin = createPlugin();
@@ -333,7 +269,7 @@ describe('settings tab', () => {
 		};
 		collect(tab.getSettingDefinitions());
 
-		expect(keys).toEqual(['dailyNotesFolder', 'weeklyNotesFolder', 'bookmarkManagedFolders']);
+		expect(keys).toEqual(['dailyNotesFolder', 'weeklyNotesFolder']);
 		for (const key of keys) {
 			expect(plugin.settings).toHaveProperty(key);
 		}

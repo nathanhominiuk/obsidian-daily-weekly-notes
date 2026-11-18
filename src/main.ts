@@ -11,7 +11,6 @@ interface DailyWeeklyNotesSettings {
 	dailyNoteFormat: string;
 	weeklyNoteFormat: string;
 	weeklyDateRangeFormat: string;
-	bookmarkManagedFolders: string;
 }
 
 const DEFAULT_SETTINGS: DailyWeeklyNotesSettings = {
@@ -19,35 +18,18 @@ const DEFAULT_SETTINGS: DailyWeeklyNotesSettings = {
 	weeklyNotesFolder: '',
 	dailyNoteFormat: 'YYYY-MM-DD',
 	weeklyNoteFormat: 'GGGG - [Week] W',
-	weeklyDateRangeFormat: 'MMMM Do',
-	bookmarkManagedFolders: ''
+	weeklyDateRangeFormat: 'MMMM Do'
 }
 
 const FORMAT_REFERENCE_URL = 'https://momentjs.com/docs/#/displaying/format/';
 
 /**
- * Parts of Obsidian this plugin uses that are not in the public API.
- * Everything is optional so a future Obsidian change degrades to a no-op.
+ * The command registry is not in the public API. It is optional here so a
+ * future Obsidian change degrades to a no-op.
  */
-interface BookmarkItem {
-	type: string;
-	path?: string;
-}
-
 interface InternalApp extends App {
 	commands?: {
 		executeCommandById(id: string): boolean;
-	};
-	internalPlugins?: {
-		getPluginById(id: string): {
-			enabled: boolean;
-			instance?: {
-				items?: BookmarkItem[];
-				addItem(item: BookmarkItem): void;
-				removeItem(item: BookmarkItem): void;
-				save(): void;
-			};
-		} | null;
 	};
 }
 
@@ -235,7 +217,6 @@ Next week - [[${nextWeek}]]
 		await this.app.workspace.getLeaf().openFile(file);
 
 		this.runLinter();
-		this.manageBookmarks(filePath, noteType);
 	}
 
 	/** Run the Linter community plugin on the open note, if it is installed. */
@@ -244,43 +225,6 @@ Next week - [[${nextWeek}]]
 			(this.app as InternalApp).commands?.executeCommandById('linter:lint-file');
 		} catch (e) {
 			console.debug('Linter plugin not available:', e);
-		}
-	}
-
-	/**
-	 * Manage bookmarks for the current note. Removes old bookmarks in managed
-	 * folders and adds a bookmark for the newly created note.
-	 */
-	manageBookmarks(filePath: string, noteType: NoteType) {
-		try {
-			const noteFolder = this.folder(noteType);
-
-			// Only proceed if the note's folder is in the managed list ("/" is the vault root)
-			const isManaged = this.settings.bookmarkManagedFolders
-				.split(',')
-				.filter(f => f.trim().length > 0)
-				.some(f => cleanFolder(f) === noteFolder);
-			if (!isManaged) return;
-
-			const bookmarksPlugin = (this.app as InternalApp).internalPlugins?.getPluginById('bookmarks');
-			const instance = bookmarksPlugin?.enabled ? bookmarksPlugin.instance : undefined;
-			if (!instance) return;
-
-			// Remove old file bookmarks in the managed folder
-			const prefix = noteFolder ? `${noteFolder}/` : '';
-			const stale = (instance.items ?? []).filter(item =>
-				item.type === 'file'
-				&& item.path?.endsWith('.md')
-				&& (prefix ? item.path.startsWith(prefix) : !item.path.includes('/')));
-			for (const item of stale) {
-				instance.removeItem(item);
-			}
-
-			// Add bookmark for the current note
-			instance.addItem({ type: 'file', path: filePath });
-			instance.save();
-		} catch (e) {
-			console.debug('Bookmarks plugin not available:', e);
 		}
 	}
 }
@@ -321,17 +265,6 @@ export class DailyWeeklyNotesSettingTab extends PluginSettingTab {
 						'Weekly note date range format',
 						'Format for the date range shown at the top of weekly notes.',
 						'weeklyDateRangeFormat'),
-				],
-			},
-			{
-				type: 'group',
-				heading: 'Bookmarks',
-				items: [
-					{
-						name: 'Bookmark managed folders',
-						desc: 'Comma-separated list of folders where old bookmarks are removed and the current note is bookmarked automatically. Leave empty to disable.',
-						control: { type: 'text', key: 'bookmarkManagedFolders', placeholder: 'Daily notes, weekly notes' },
-					},
 				],
 			},
 		];

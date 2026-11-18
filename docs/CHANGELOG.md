@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A failed note creation showed two error notices
 
 ### Removed
+- Automatic bookmark management and its "Bookmark managed folders" setting. Existing bookmarks are left as they are
 - Empty `styles.css`, unused `tslib`, and the "Common format patterns" list in settings (the README keeps it)
 
 ### Added
