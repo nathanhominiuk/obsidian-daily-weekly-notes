@@ -16,7 +16,6 @@ This will create the `main.js` file needed to run the plugin.
 1. Copy the following files to your Obsidian vault:
    - `main.js`
    - `manifest.json`
-   - `styles.css`
 
 2. Place them in: `.obsidian/plugins/daily-weekly-notes/`
    
@@ -29,13 +28,13 @@ This will create the `main.js` file needed to run the plugin.
 
 4. Go to Settings → Community Plugins
 
-5. Enable "Daily & Weekly Notes"
+5. Enable "Daily and Weekly Notes Creator"
 
 ### Step 3: Use the Plugin
 
 Open the Command Palette (Ctrl/Cmd + P) and search for:
-- "Create Daily Note" - to create today's daily note
-- "Create Weekly Note" - to create this week's weekly note
+- "Create daily note" - to create today's daily note
+- "Create weekly note" - to create this week's weekly note
 
 ## Development Installation
 
@@ -60,4 +59,5 @@ If you want to develop the plugin:
 
 - **Plugin doesn't appear in settings**: Make sure you've placed the files in the correct location and restarted Obsidian
 - **Commands don't appear**: Enable the plugin in Settings → Community Plugins
-- **Build errors**: Make sure you have Node.js installed (version 16 or higher recommended)
+- **Build errors**: Make sure you have Node.js installed (version 22.13 or higher; CI uses 24)
+- **Plugin fails to load**: Obsidian 1.13.0 or later is required

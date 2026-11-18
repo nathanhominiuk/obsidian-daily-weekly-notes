@@ -1,21 +1,19 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import moment from 'moment';
 import { TFile } from 'obsidian';
-import DailyWeeklyNotesPlugin from './main';
+import DailyWeeklyNotesPlugin, { DailyWeeklyNotesSettingTab } from './main';
 
-function createPlugin(): DailyWeeklyNotesPlugin {
+function createPlugin() {
 	const mockApp = {
 		vault: {
-			getAbstractFileByPath: () => null,
-			createFolder: async () => {},
-			create: async () => {},
-			process: async () => {},
+			getFileByPath: () => null,
+			getFolderByPath: () => null,
+			createFolder: vi.fn(async () => {}),
+			create: vi.fn(async (path: string) => Object.assign(new TFile(), { path })),
+			process: vi.fn(async () => ''),
 		},
 		workspace: {
 			getLeaf: () => ({ openFile: async () => {} }),
-		},
-		commands: {
-			executeCommandById: vi.fn(),
 		},
 	};
 	const mockManifest = { id: 'daily-weekly-notes', name: 'Test', version: '0.0.1' };
@@ -26,13 +24,12 @@ function createPlugin(): DailyWeeklyNotesPlugin {
 		dailyNoteFormat: 'YYYY-MM-DD',
 		weeklyNoteFormat: 'GGGG - [Week] W',
 		weeklyDateRangeFormat: 'MMMM Do',
-		bookmarkManagedFolders: '',
 	};
-	return plugin;
+	return Object.assign(plugin, { mockApp });
 }
 
 describe('buildFilePath', () => {
-	let plugin: DailyWeeklyNotesPlugin;
+	let plugin: ReturnType<typeof createPlugin>;
 	beforeEach(() => { plugin = createPlugin(); });
 
 	it('should return filename with .md extension when no folder', () => {
@@ -45,7 +42,7 @@ describe('buildFilePath', () => {
 });
 
 describe('buildLinkPath', () => {
-	let plugin: DailyWeeklyNotesPlugin;
+	let plugin: ReturnType<typeof createPlugin>;
 	beforeEach(() => { plugin = createPlugin(); });
 
 	it('should return just the filename when no folder', () => {
@@ -58,7 +55,7 @@ describe('buildLinkPath', () => {
 });
 
 describe('generateDailyNoteContent', () => {
-	let plugin: DailyWeeklyNotesPlugin;
+	let plugin: ReturnType<typeof createPlugin>;
 	beforeEach(() => { plugin = createPlugin(); });
 
 	it('should include daily tag in frontmatter', () => {
@@ -110,7 +107,7 @@ describe('generateDailyNoteContent', () => {
 });
 
 describe('generateWeeklyNoteContent', () => {
-	let plugin: DailyWeeklyNotesPlugin;
+	let plugin: ReturnType<typeof createPlugin>;
 	beforeEach(() => { plugin = createPlugin(); });
 
 	it('should include daily and weekly tags in frontmatter', () => {
@@ -164,108 +161,102 @@ describe('generateWeeklyNoteContent', () => {
 	it('should end with a horizontal rule', () => {
 		const date = moment('2026-01-06');
 		const content = plugin.generateWeeklyNoteContent(date);
-		expect(content.trimEnd()).toMatch(/---$/);
+		expect(content).toMatch(/---\s*$/);
+	});
+});
+
+describe('settings fallbacks', () => {
+	it('should strip surrounding slashes and whitespace from folders', () => {
+		const plugin = createPlugin();
+		plugin.settings.dailyNotesFolder = ' /Daily/ ';
+		plugin.settings.weeklyNotesFolder = '/';
+		const content = plugin.generateDailyNoteContent(moment('2026-01-06'));
+		expect(content).toContain('Yesterday - [[Daily/2026-01-05]]');
+		expect(content).toContain('Week - [[2026 - Week 2]]');
+	});
+
+	it('should fall back to the default format when a format is empty', () => {
+		const plugin = createPlugin();
+		plugin.settings.dailyNoteFormat = ' ';
+		plugin.settings.weeklyDateRangeFormat = '';
+		expect(plugin.generateDailyNoteContent(moment('2026-01-06'))).toContain('Tomorrow - [[2026-01-07]]');
+		expect(plugin.generateWeeklyNoteContent(moment('2026-01-06'))).toContain('*January 5th - 11th*');
+	});
+});
+
+describe('createNote', () => {
+	it('should create the parent folder of the note, including folders from the format', async () => {
+		const plugin = createPlugin();
+		plugin.settings.dailyNotesFolder = 'Daily';
+		plugin.settings.dailyNoteFormat = 'YYYY/[note]';
+
+		await plugin.createNote('daily');
+
+		const year = moment().format('YYYY');
+		expect(plugin.mockApp.vault.createFolder).toHaveBeenCalledWith(`Daily/${year}`);
+		expect(plugin.mockApp.vault.create).toHaveBeenCalledWith(`Daily/${year}/note.md`, expect.any(String));
+	});
+
+	it('should not create a folder for notes in the vault root', async () => {
+		const plugin = createPlugin();
+
+		await plugin.createNote('weekly');
+
+		expect(plugin.mockApp.vault.createFolder).not.toHaveBeenCalled();
+		expect(plugin.mockApp.vault.create).toHaveBeenCalledOnce();
+	});
+
+	it('should not throw when creating the note fails', async () => {
+		const plugin = createPlugin();
+		plugin.mockApp.vault.create.mockRejectedValue(new Error('disk full'));
+		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+		await expect(plugin.createNote('daily')).resolves.toBeUndefined();
+		expect(consoleError).toHaveBeenCalled();
+		consoleError.mockRestore();
 	});
 });
 
 describe('createOrUpdateNote', () => {
-	it('should invoke linter after creating a new note', async () => {
+	it('should create a new note', async () => {
 		const plugin = createPlugin();
-		const mockFile = Object.create(TFile.prototype);
-		mockFile.path = 'test.md';
-		let callCount = 0;
-		(plugin.app.vault as any).getAbstractFileByPath = () => {
-			callCount++;
-			// First call: check if file exists (return null = doesn't exist)
-			// Second call: get created file (return TFile instance)
-			return callCount === 1 ? null : mockFile;
-		};
-		(plugin.app.vault as any).create = vi.fn().mockResolvedValue(undefined);
 
 		await plugin.createOrUpdateNote('test.md', 'content', 'daily');
 
-		expect(plugin.app.commands.executeCommandById).toHaveBeenCalledWith('linter:lint-file');
+		expect(plugin.mockApp.vault.create).toHaveBeenCalledWith('test.md', 'content');
 	});
 
-	it('should not throw when linter is unavailable', async () => {
+	it('should prepend the template when the note already exists', async () => {
 		const plugin = createPlugin();
-		const mockFile = Object.create(TFile.prototype);
-		mockFile.path = 'test.md';
-		let callCount = 0;
-		(plugin.app.vault as any).getAbstractFileByPath = () => {
-			callCount++;
-			return callCount === 1 ? null : mockFile;
-		};
-		(plugin.app.vault as any).create = vi.fn().mockResolvedValue(undefined);
-		plugin.app.commands.executeCommandById.mockImplementation(() => {
-			throw new Error('Command not found');
-		});
+		const existing = Object.assign(new TFile(), { path: 'test.md' });
+		plugin.mockApp.vault.getFileByPath = (() => existing) as any;
 
-		await expect(plugin.createOrUpdateNote('test.md', 'content', 'daily'))
-			.resolves.not.toThrow();
+		await plugin.createOrUpdateNote('test.md', 'content', 'daily');
+
+		expect(plugin.mockApp.vault.create).not.toHaveBeenCalled();
+		const [file, transform] = plugin.mockApp.vault.process.mock.calls[0] as unknown as [TFile, (data: string) => string];
+		expect(file).toBe(existing);
+		expect(transform('old')).toBe('content\nold');
 	});
 });
 
-describe('manageBookmarks', () => {
-	it('should not manage bookmarks when bookmarkManagedFolders is empty', async () => {
+describe('settings tab', () => {
+	it('should bind every control to an existing setting', () => {
 		const plugin = createPlugin();
-		const mockInstance = { items: [], addItem: vi.fn(), removeItem: vi.fn(), save: vi.fn() };
-		(plugin.app as any).internalPlugins = {
-			getPluginById: () => ({ enabled: true, instance: mockInstance }),
+		const tab = new DailyWeeklyNotesSettingTab(plugin.app, plugin);
+
+		const keys: string[] = [];
+		const collect = (items: any[]) => {
+			for (const item of items) {
+				if (item.control) keys.push(item.control.key);
+				if (item.items) collect(item.items);
+			}
 		};
-		plugin.settings.bookmarkManagedFolders = '';
+		collect(tab.getSettingDefinitions());
 
-		await plugin.manageBookmarks('test.md', 'daily');
-
-		expect(mockInstance.addItem).not.toHaveBeenCalled();
-	});
-
-	it('should add bookmark when folder is in managed list', async () => {
-		const plugin = createPlugin();
-		const mockInstance = { items: [], addItem: vi.fn(), removeItem: vi.fn(), save: vi.fn() };
-		(plugin.app as any).internalPlugins = {
-			getPluginById: () => ({ enabled: true, instance: mockInstance }),
-		};
-		plugin.settings.dailyNotesFolder = 'Daily';
-		plugin.settings.bookmarkManagedFolders = 'Daily, Weekly';
-
-		await plugin.manageBookmarks('Daily/2026-01-06.md', 'daily');
-
-		expect(mockInstance.addItem).toHaveBeenCalledWith({ type: 'file', path: 'Daily/2026-01-06.md' });
-		expect(mockInstance.save).toHaveBeenCalled();
-	});
-
-	it('should remove old bookmarks in the managed folder', async () => {
-		const plugin = createPlugin();
-		const oldBookmark = { type: 'file', path: 'Daily/2026-01-05.md' };
-		const unrelatedBookmark = { type: 'file', path: 'Other/note.md' };
-		const mockInstance = {
-			items: [oldBookmark, unrelatedBookmark],
-			addItem: vi.fn(),
-			removeItem: vi.fn(),
-			save: vi.fn(),
-		};
-		(plugin.app as any).internalPlugins = {
-			getPluginById: () => ({ enabled: true, instance: mockInstance }),
-		};
-		plugin.settings.dailyNotesFolder = 'Daily';
-		plugin.settings.bookmarkManagedFolders = 'Daily';
-
-		await plugin.manageBookmarks('Daily/2026-01-06.md', 'daily');
-
-		expect(mockInstance.removeItem).toHaveBeenCalledWith(oldBookmark);
-		expect(mockInstance.removeItem).not.toHaveBeenCalledWith(unrelatedBookmark);
-	});
-
-	it('should handle bookmarks plugin being unavailable', async () => {
-		const plugin = createPlugin();
-		(plugin.app as any).internalPlugins = {
-			getPluginById: () => null,
-		};
-		plugin.settings.bookmarkManagedFolders = 'Daily';
-		plugin.settings.dailyNotesFolder = 'Daily';
-
-		await expect(plugin.manageBookmarks('Daily/test.md', 'daily'))
-			.resolves.not.toThrow();
+		expect(keys).toEqual(['dailyNotesFolder', 'weeklyNotesFolder']);
+		for (const key of keys) {
+			expect(plugin.settings).toHaveProperty(key);
+		}
 	});
 });

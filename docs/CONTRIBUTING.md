@@ -1,4 +1,4 @@
-# Contributing to Daily & Weekly Notes Creator
+# Contributing to Daily and Weekly Notes Creator
 
 ## Pull Request Checklist
 
@@ -21,16 +21,18 @@ Before submitting or merging a PR, ensure the following are completed:
 
 Version bumping is handled automatically by GitHub Actions when PRs are merged:
 1. The `version-bump.yml` workflow detects PR labels
-2. Updates `package.json`, `manifest.json`, and `versions.json`
-3. Creates a git tag and pushes it
-4. The `release.yml` workflow creates a draft GitHub release
+2. Runs `npm version`, which updates `package.json`, `package-lock.json` and `manifest.json` (and `versions.json` when `minAppVersion` changed)
+3. Builds the plugin, attests the release files, creates a git tag and pushes it
+4. Creates a draft GitHub release (`release.yml` does the same for manually pushed tags)
 
 **Note:** Manual version bumps are not required. The automation handles this.
 
 ### Code Quality
 
 - [ ] Code builds without errors (`npm run build`)
-- [ ] No new TypeScript errors
+- [ ] Lint passes (`npm run lint`) - this runs the Obsidian community directory review rules
+- [ ] Tests pass (`npm test`)
+- [ ] `main.js` is not committed - it is build output
 - [ ] Follows [Obsidian Plugin Guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines)
 
 ## SemVer Guidelines

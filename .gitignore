@@ -1,9 +1,8 @@
 # npm
 node_modules
-# package-lock.json
 
 # build
-# main.js
+main.js
 *.js.map
 
 # obsidian
