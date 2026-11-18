@@ -24,6 +24,17 @@ export class PluginSettingTab {
 	}
 }
 
+export class Modal {
+	app: any;
+	constructor(app: any) {
+		this.app = app;
+	}
+	open() {}
+	close() {}
+}
+
+export class Setting {}
+
 export class TFile {
 	path: string = '';
 }

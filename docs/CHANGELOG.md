@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `main.js` is no longer committed; releases build it
 
 ### Added
+- Commands "Create daily note for a specific date" and "Create weekly note for a specific date", which ask for a date instead of using the current one
+- Commands "Create daily notes for a date range" and "Create weekly notes for a date range", which create every note in a range. Existing notes are skipped, and one run creates at most 366 notes
 - Settings changed by Sync or another device are picked up without reloading the plugin
 - ESLint with `eslint-plugin-obsidianmd` (`npm run lint`), and a CI workflow that lints, tests and builds every PR
 
