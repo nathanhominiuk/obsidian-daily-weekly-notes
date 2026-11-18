@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-11-18
+
+### Added
+- Commands "Create daily note for a specific date" and "Create weekly note for a specific date", which ask for a date instead of using the current one
+- Commands "Create daily notes for a date range" and "Create weekly notes for a date range", which create every note in a range. Existing notes are skipped, and one run creates at most 366 notes
+
+## [0.4.0] - 2026-11-18
+
 ### Changed
 - Plugin renamed from "Daily & Weekly Notes Creator" to "Daily and Weekly Notes Creator" to follow Obsidian's naming rules. The plugin ID is unchanged
 - **Requires Obsidian 1.13.0** (was 0.15.0). Older Obsidian versions keep receiving 0.3.1 through `versions.json`
@@ -16,8 +24,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `main.js` is no longer committed; releases build it
 
 ### Added
-- Commands "Create daily note for a specific date" and "Create weekly note for a specific date", which ask for a date instead of using the current one
-- Commands "Create daily notes for a date range" and "Create weekly notes for a date range", which create every note in a range. Existing notes are skipped, and one run creates at most 366 notes
 - Settings changed by Sync or another device are picked up without reloading the plugin
 - ESLint with `eslint-plugin-obsidianmd` (`npm run lint`), and a CI workflow that lints, tests and builds every PR
 
@@ -29,6 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Automatic run of the Linter plugin after creating a note; lint manually instead
 - Automatic bookmark management and its "Bookmark managed folders" setting. Existing bookmarks are left as they are
 - Empty `styles.css`, unused `tslib`, and the "Common format patterns" list in settings (the README keeps it)
+
+## [0.3.0] - 2026-01-14
 
 ### Added
 - Custom folder locations for daily and weekly notes
