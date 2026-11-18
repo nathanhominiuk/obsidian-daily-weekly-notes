@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import moment from 'moment';
 import { TFile } from 'obsidian';
-import DailyWeeklyNotesPlugin, { DailyWeeklyNotesSettingTab } from './main';
+import DailyWeeklyNotesPlugin, { DailyWeeklyNotesSettingTab, MAX_BULK_NOTES, datesInRange, parseDateInput } from './main';
 
 function createPlugin() {
 	const mockApp = {
@@ -212,6 +212,119 @@ describe('createNote', () => {
 		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
 		await expect(plugin.createNote('daily')).resolves.toBeUndefined();
+		expect(consoleError).toHaveBeenCalled();
+		consoleError.mockRestore();
+	});
+});
+
+describe('createNote for a specific date', () => {
+	it('should create the daily note for the given date', async () => {
+		const plugin = createPlugin();
+
+		await plugin.createNote('daily', moment('2025-03-14'));
+
+		const [path, content] = plugin.mockApp.vault.create.mock.calls[0] as unknown as [string, string];
+		expect(path).toBe('2025-03-14.md');
+		expect(content).toContain('*Friday March 14th, 2025*');
+	});
+
+	it('should create the weekly note for the week containing the given date', async () => {
+		const plugin = createPlugin();
+
+		await plugin.createNote('weekly', moment('2026-01-01'));
+
+		const [path, content] = plugin.mockApp.vault.create.mock.calls[0] as unknown as [string, string];
+		expect(path).toBe('2026 - Week 1.md');
+		expect(content).toContain('Monday - [[2025-12-29]]');
+	});
+});
+
+describe('parseDateInput', () => {
+	it('should parse a date input value', () => {
+		expect(parseDateInput('2026-02-28')?.format('YYYY-MM-DD')).toBe('2026-02-28');
+	});
+
+	it('should reject empty and invalid values', () => {
+		expect(parseDateInput('')).toBeNull();
+		expect(parseDateInput('2026-02-30')).toBeNull();
+		expect(parseDateInput('28/02/2026')).toBeNull();
+	});
+});
+
+describe('datesInRange', () => {
+	const format = (dates: moment.Moment[]) => dates.map((date) => date.format('YYYY-MM-DD'));
+
+	it('should list every day, both ends included', () => {
+		expect(format(datesInRange('daily', moment('2026-02-27'), moment('2026-03-02'))))
+			.toEqual(['2026-02-27', '2026-02-28', '2026-03-01', '2026-03-02']);
+	});
+
+	it('should list a single day when start and end match', () => {
+		expect(format(datesInRange('daily', moment('2026-01-06'), moment('2026-01-06')))).toEqual(['2026-01-06']);
+	});
+
+	it('should list the Monday of every week touching the range', () => {
+		// Sunday of week 1 to Monday of week 3
+		expect(format(datesInRange('weekly', moment('2026-01-04'), moment('2026-01-12'))))
+			.toEqual(['2025-12-29', '2026-01-05', '2026-01-12']);
+	});
+
+	it('should return nothing when the end is before the start', () => {
+		expect(datesInRange('daily', moment('2026-01-06'), moment('2026-01-05'))).toEqual([]);
+	});
+});
+
+describe('createNotesInRange', () => {
+	it('should create one daily note per day', async () => {
+		const plugin = createPlugin();
+		plugin.settings.dailyNotesFolder = 'Daily';
+
+		const result = await plugin.createNotesInRange('daily', moment('2026-01-30'), moment('2026-02-01'));
+
+		expect(result).toEqual({ created: 3, skipped: 0 });
+		expect(plugin.mockApp.vault.create.mock.calls.map((call) => call[0]))
+			.toEqual(['Daily/2026-01-30.md', 'Daily/2026-01-31.md', 'Daily/2026-02-01.md']);
+		expect(plugin.mockApp.vault.createFolder).toHaveBeenCalledWith('Daily');
+	});
+
+	it('should create one weekly note per week across a year boundary', async () => {
+		const plugin = createPlugin();
+
+		await plugin.createNotesInRange('weekly', moment('2025-12-22'), moment('2026-01-05'));
+
+		expect(plugin.mockApp.vault.create.mock.calls.map((call) => call[0]))
+			.toEqual(['2025 - Week 52.md', '2026 - Week 1.md', '2026 - Week 2.md']);
+	});
+
+	it('should skip existing notes without modifying them', async () => {
+		const plugin = createPlugin();
+		plugin.mockApp.vault.getFileByPath = ((path: string) =>
+			path === '2026-01-06.md' ? Object.assign(new TFile(), { path }) : null) as any;
+
+		const result = await plugin.createNotesInRange('daily', moment('2026-01-05'), moment('2026-01-07'));
+
+		expect(result).toEqual({ created: 2, skipped: 1 });
+		expect(plugin.mockApp.vault.process).not.toHaveBeenCalled();
+		expect(plugin.mockApp.vault.create.mock.calls.map((call) => call[0])).toEqual(['2026-01-05.md', '2026-01-07.md']);
+	});
+
+	it('should create nothing when the range exceeds the limit', async () => {
+		const plugin = createPlugin();
+
+		const result = await plugin.createNotesInRange('daily', moment('2026-01-01'), moment('2026-01-01').add(MAX_BULK_NOTES, 'days'));
+
+		expect(result).toEqual({ created: 0, skipped: 0 });
+		expect(plugin.mockApp.vault.create).not.toHaveBeenCalled();
+	});
+
+	it('should not throw when a note fails, and report what was created', async () => {
+		const plugin = createPlugin();
+		plugin.mockApp.vault.create.mockResolvedValueOnce(new TFile()).mockRejectedValue(new Error('disk full'));
+		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+		const result = await plugin.createNotesInRange('daily', moment('2026-01-05'), moment('2026-01-07'));
+
+		expect(result).toEqual({ created: 1, skipped: 0 });
 		expect(consoleError).toHaveBeenCalled();
 		consoleError.mockRestore();
 	});

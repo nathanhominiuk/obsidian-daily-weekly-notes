@@ -109,6 +109,24 @@ Next week - [[2026 - Week 3]]
 
 ```
 
+### Creating Notes for Another Date
+
+Use these commands to create a note for a day or week other than the current one:
+
+- "Create daily note for a specific date"
+- "Create weekly note for a specific date"
+
+Each asks for a date. For weekly notes, pick any day in the week. The note is created and opened the same way as the note for the current date.
+
+### Creating Notes in Bulk
+
+Use these commands to create every note in a date range:
+
+- "Create daily notes for a date range"
+- "Create weekly notes for a date range"
+
+Each asks for a start and end date, both included. Weekly notes are created for every week that overlaps the range. Notes that already exist are skipped and left unchanged, the created notes are not opened, and a notification reports how many were created and skipped. One run creates at most 366 notes.
+
 ## Configuration
 
 Access the plugin settings through Settings → Community Plugins → Daily and Weekly Notes Creator.
@@ -148,10 +166,12 @@ See the [Moment.js format documentation](https://momentjs.com/docs/#/displaying/
 
 ## Behavior with Existing Notes
 
-If a daily or weekly note already exists, the plugin will:
+If a daily or weekly note already exists, the single-note commands will:
 - Insert the template content at the top of the existing note
 - Add an extra line separator between the template and existing content
 - Display a notification confirming the template was added
+
+The date range commands skip existing notes instead.
 
 ## Technical Details
 

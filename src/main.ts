@@ -1,4 +1,4 @@
-import { App, Notice, Plugin, PluginSettingTab, moment, normalizePath } from 'obsidian';
+import { App, Modal, Notice, Plugin, PluginSettingTab, Setting, moment, normalizePath } from 'obsidian';
 import type { SettingDefinition, SettingDefinitionItem } from 'obsidian';
 import type { Moment } from 'moment';
 
@@ -27,7 +27,39 @@ const FORMAT_REFERENCE_URL = 'https://momentjs.com/docs/#/displaying/format/';
  * Obsidian's bundled Moment.js. Its typings are a namespace import, which
  * TypeScript no longer treats as callable, hence the cast.
  */
-const now = moment as unknown as () => Moment;
+const createMoment = moment as unknown as (input?: string, format?: string, strict?: boolean) => Moment;
+const now = () => createMoment();
+
+/** Value format of an HTML date input. */
+const DATE_INPUT_FORMAT = 'YYYY-MM-DD';
+
+/** Upper bound on notes created by one bulk command, as a guard against typos in the range. */
+export const MAX_BULK_NOTES = 366;
+
+/** Parse the value of a date input; null when it is empty or not a real date. */
+export function parseDateInput(value: string): Moment | null {
+	const date = createMoment(value.trim(), DATE_INPUT_FORMAT, true);
+	return date.isValid() ? date : null;
+}
+
+/**
+ * The dates of the notes covering a range, both ends included: every day for
+ * daily notes, the Monday of every ISO week touching the range for weekly notes.
+ */
+export function datesInRange(type: NoteType, start: Moment, end: Moment): Moment[] {
+	const unit = type === 'daily' ? 'day' : 'week';
+	const cursor = type === 'daily' ? start.clone().startOf('day') : start.clone().startOf('isoWeek');
+	const dates: Moment[] = [];
+	while (!cursor.isAfter(end, 'day')) {
+		dates.push(cursor.clone());
+		cursor.add(1, unit);
+	}
+	return dates;
+}
+
+function plural(count: number, type: NoteType): string {
+	return `${count} ${type} ${count === 1 ? 'note' : 'notes'}`;
+}
 
 /** Strip surrounding whitespace and slashes; the vault root is the empty string. */
 function cleanFolder(folder: string): string {
@@ -51,6 +83,20 @@ export default class DailyWeeklyNotesPlugin extends Plugin {
 			name: 'Create weekly note',
 			callback: () => void this.createNote('weekly')
 		});
+
+		for (const type of ['daily', 'weekly'] as const) {
+			this.addCommand({
+				id: `create-${type}-note-for-date`,
+				name: `Create ${type} note for a specific date`,
+				callback: () => new DateModal(this.app, this, type).open()
+			});
+
+			this.addCommand({
+				id: `create-${type}-notes-for-range`,
+				name: `Create ${type} notes for a date range`,
+				callback: () => new DateRangeModal(this.app, this, type).open()
+			});
+		}
 
 		this.addSettingTab(new DailyWeeklyNotesSettingTab(this.app, this));
 	}
@@ -116,21 +162,64 @@ export default class DailyWeeklyNotesPlugin extends Plugin {
 		}
 	}
 
-	async createNote(type: NoteType) {
-		try {
-			const today = now();
-			const filePath = this.buildFilePath(this.folder(type), this.fileName(type, today));
-			const content = type === 'daily'
-				? this.generateDailyNoteContent(today)
-				: this.generateWeeklyNoteContent(today);
+	/** File path and template content of the note of the given type for a date. */
+	private noteFor(type: NoteType, date: Moment): { filePath: string; content: string } {
+		return {
+			filePath: this.buildFilePath(this.folder(type), this.fileName(type, date)),
+			content: type === 'daily'
+				? this.generateDailyNoteContent(date)
+				: this.generateWeeklyNoteContent(date),
+		};
+	}
 
-			// The parent comes from the path, so formats such as YYYY/MM/DD work too
-			await this.ensureFolderExists(filePath.substring(0, filePath.lastIndexOf('/')));
+	/** Create the parent folder of a note. It comes from the path, so formats such as YYYY/MM/DD work too. */
+	private async ensureParentExists(filePath: string): Promise<void> {
+		await this.ensureFolderExists(filePath.substring(0, filePath.lastIndexOf('/')));
+	}
+
+	/** Create and open the note for a date (today by default). For weekly notes, any date in the week works. */
+	async createNote(type: NoteType, date: Moment = now()) {
+		try {
+			const { filePath, content } = this.noteFor(type, date);
+			await this.ensureParentExists(filePath);
 			await this.createOrUpdateNote(filePath, content, type);
 		} catch (error) {
 			console.error(`Error creating ${type} note:`, error);
 			new Notice(`Failed to create ${type} note. Check the console for details.`);
 		}
+	}
+
+	/**
+	 * Create the notes covering a date range, both ends included. Unlike
+	 * createNote, existing notes are left untouched and nothing is opened.
+	 */
+	async createNotesInRange(type: NoteType, start: Moment, end: Moment): Promise<{ created: number; skipped: number }> {
+		let created = 0;
+		let skipped = 0;
+		try {
+			const dates = datesInRange(type, start, end);
+			if (dates.length > MAX_BULK_NOTES) {
+				new Notice(`That range covers ${plural(dates.length, type)}. The limit is ${MAX_BULK_NOTES} at a time.`);
+				return { created, skipped };
+			}
+
+			for (const date of dates) {
+				const { filePath, content } = this.noteFor(type, date);
+				if (this.app.vault.getFileByPath(filePath)) {
+					skipped++;
+					continue;
+				}
+				await this.ensureParentExists(filePath);
+				await this.app.vault.create(filePath, content);
+				created++;
+			}
+
+			new Notice(`Created ${plural(created, type)}` + (skipped ? `, skipped ${skipped} that already exist` : ''));
+		} catch (error) {
+			console.error(`Error creating ${type} notes:`, error);
+			new Notice(`Failed after creating ${plural(created, type)}. Check the console for details.`);
+		}
+		return { created, skipped };
 	}
 
 	generateDailyNoteContent(date: Moment): string {
@@ -205,6 +294,88 @@ Next week - [[${nextWeek}]]
 		}
 
 		await this.app.workspace.getLeaf().openFile(file);
+	}
+}
+
+/** Add a native date picker row to a modal and return its input element. */
+function addDateInput(containerEl: HTMLElement, name: string, desc: string, value: string, onEnter: () => void): HTMLInputElement {
+	let inputEl!: HTMLInputElement;
+	new Setting(containerEl).setName(name).setDesc(desc).addText((text) => {
+		inputEl = text.inputEl;
+		inputEl.type = 'date';
+		text.setValue(value);
+		inputEl.addEventListener('keydown', (event) => {
+			if (event.key === 'Enter') {
+				event.preventDefault();
+				onEnter();
+			}
+		});
+	});
+	return inputEl;
+}
+
+/** Asks for a date, then creates the daily or weekly note for it. */
+export class DateModal extends Modal {
+	constructor(app: App, private plugin: DailyWeeklyNotesPlugin, private type: NoteType) {
+		super(app);
+	}
+
+	onOpen() {
+		this.setTitle(`Create ${this.type} note`);
+		const desc = this.type === 'daily' ? 'Day of the note.' : 'Any day in the week of the note.';
+		const submit = () => {
+			const date = parseDateInput(inputEl.value);
+			if (!date) {
+				new Notice('Enter a valid date');
+				return;
+			}
+			this.close();
+			void this.plugin.createNote(this.type, date);
+		};
+		const inputEl = addDateInput(this.contentEl, 'Date', desc, now().format(DATE_INPUT_FORMAT), submit);
+		new Setting(this.contentEl).addButton((button) => button.setButtonText('Create').setCta().onClick(submit));
+	}
+
+	onClose() {
+		this.contentEl.empty();
+	}
+}
+
+/** Asks for a start and end date, then creates every daily or weekly note in between. */
+export class DateRangeModal extends Modal {
+	constructor(app: App, private plugin: DailyWeeklyNotesPlugin, private type: NoteType) {
+		super(app);
+	}
+
+	onOpen() {
+		this.setTitle(`Create ${this.type} notes`);
+		const weekly = this.type === 'weekly';
+		const submit = () => {
+			const start = parseDateInput(startEl.value);
+			const end = parseDateInput(endEl.value);
+			if (!start || !end) {
+				new Notice('Enter a valid start and end date');
+				return;
+			}
+			if (end.isBefore(start)) {
+				new Notice('The end date is before the start date');
+				return;
+			}
+			this.close();
+			void this.plugin.createNotesInRange(this.type, start, end);
+		};
+		const today = now().format(DATE_INPUT_FORMAT);
+		const startEl = addDateInput(this.contentEl, 'Start date',
+			weekly ? 'Any day in the first week.' : 'First day, included.', today, submit);
+		const endEl = addDateInput(this.contentEl, 'End date',
+			weekly ? 'Any day in the last week.' : 'Last day, included.', today, submit);
+		new Setting(this.contentEl)
+			.setDesc(`Existing notes are skipped. At most ${MAX_BULK_NOTES} notes are created at a time.`)
+			.addButton((button) => button.setButtonText('Create').setCta().onClick(submit));
+	}
+
+	onClose() {
+		this.contentEl.empty();
 	}
 }
 
